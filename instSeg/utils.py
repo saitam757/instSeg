@@ -136,28 +136,60 @@ def adj_matrix(labels, radius):
     if len(labels.shape) == 3:
         labels = np.expand_dims(labels, axis=-1)
 
+    print("B x H x W x 1")
     adjs = []
     pbar = tqdm(labels, desc='Adjacent matrix:', ncols=100)
+    # e.g (1, 24, 24, 1)
+    print(f"0) label {labels.shape}")
+    # loop over batch dimension (1,
     for l in pbar:
+        print(f"-) {l.shape}")
+        # e.g (1)
+        # last dimension , 1)
+        print(f"1) label {l.shape[-1]}")
+        h = l.shape[:2]
+        # e.g (24, 24)
+        # (height, width)
+        print(f"2) label {l.shape[:2]}")
+
+        print(f"shpe {l.shape[0]} {l.shape[1]}")
+
         if l.shape[-1] == 1:
             label_stack = np.zeros((max(np.unique(l))+1, *l.shape[:2]), dtype=np.uint8)
+            print(f":w-- {label_stack.shape}")
             X, Y = np.meshgrid(np.arange(0, l.shape[0]), np.arange(0, l.shape[1]), indexing='ij')
+           
+            # indexing in label stack array !
+            #l.flatten() one d-array of region numbers, index in zeroth label dimension of label_stack
+            #X.flatten() and Y.flatten() are positions of the label in
+            # reuslt is a 3d stack [Regions, Width, height], where at each regions index a
+            # binary image is accesed where only the pixels of that particular region
+            # are 1, rest 0 
             label_stack[l.flatten(), X.flatten(), Y.flatten()] = 1
         else:
             label_stack = np.moveaxis(l, -1, 0) > 0
             label_stack = np.pad(label_stack, ((1,0),(0,0),(0,0)), mode='constant', constant_values=0)
             label_stack = label_stack.astype(np.uint8)
 
+        # Dilation of each binary label region 
         for i in range(label_stack.shape[0]):
+            print(f" stack {label_stack[i].shape}")
             label_stack[i] = cv2.dilate(label_stack[i], D, iterations = 1)
         
+        # adjacancy matrix
         adj = np.zeros((MAX_OBJ_ADJ_MATRIX, MAX_OBJ_ADJ_MATRIX), bool)
         for i in range(label_stack.shape[0]):
+            # get positions of region pixels
             idx_r, idx_c = np.nonzero(label_stack[i])
             if len(idx_r) > 0:
                 neighbor = np.any(label_stack[:, idx_r, idx_c], axis=1)
+
+                # adjacency matrix
                 adj[i, :len(neighbor)] = neighbor
+                # make symmetric
                 adj[:len(neighbor), i] = neighbor
+                
+        # background neighbor to all regions
         adj[0,:] = True
         adj[:,0] = True
         adjs.append(adj)
