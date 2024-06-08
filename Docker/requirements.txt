@@ -1,8 +1,0 @@
-numpy
-scikit-image
-scikit-learn
-tensorflow-addons
-opencv-python-headless
-tqdm
-matplotlib
-pyqt5
